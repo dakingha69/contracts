@@ -4,10 +4,7 @@ from typing import Dict, Optional
 import attr
 import pkg_resources
 from deploy_tools.compile import build_initcode
-from deploy_tools.deploy import (
-    increase_transaction_options_nonce,
-    send_function_call_transaction,
-)
+from deploy_tools.deploy import increase_transaction_options_nonce, send_function_call_transaction
 from eth_keys.datatypes import PrivateKey
 from hexbytes import HexBytes
 from web3 import Web3
@@ -47,16 +44,7 @@ class MetaTransaction:
         return self.to
 
     @classmethod
-    def from_function_call(
-        cls,
-        function_call,
-        *,
-        from_: str = None,
-        to: str,
-        nonce: int = None,
-        fees: int = 0,
-        currency_network_of_fees: str = None,
-    ):
+    def from_function_call(cls, function_call, *, from_: str = None, to: str, nonce: int = None, fees: int = 0, currency_network_of_fees: str = None):
         """Construct a meta transaction from a web3 function call.
 
         Usage:
@@ -68,47 +56,12 @@ class MetaTransaction:
             # Use default value for currency_network_of_fees
             return cls(from_=from_, to=to, value=0, data=data, fees=fees, nonce=nonce)
         else:
-            return cls(
-                from_=from_,
-                to=to,
-                value=0,
-                data=data,
-                fees=fees,
-                currency_network_of_fees=currency_network_of_fees,
-                nonce=nonce,
-            )
+            return cls(from_=from_, to=to, value=0, data=data, fees=fees, currency_network_of_fees=currency_network_of_fees, nonce=nonce)
 
     @property
     def hash(self) -> bytes:
-        (from_, to, currency_network_of_fees) = validate_and_checksum_addresses(
-            [self.from_, self.to, self.currency_network_of_fees]
-        )
-        return solidity_keccak(
-            [
-                "bytes1",
-                "bytes1",
-                "address",
-                "address",
-                "uint256",
-                "bytes32",
-                "uint64",
-                "address",
-                "uint256",
-                "bytes",
-            ],
-            [
-                "0x19",
-                "0x00",
-                from_,
-                to,
-                self.value,
-                solidity_keccak(["bytes"], [self.data]),
-                self.fees,
-                currency_network_of_fees,
-                self.nonce,
-                self.extra_data,
-            ],
-        )
+        (from_, to, currency_network_of_fees) = validate_and_checksum_addresses([self.from_, self.to, self.currency_network_of_fees])
+        return solidity_keccak(["bytes1", "bytes1", "address", "address", "uint256", "bytes32", "uint64", "address", "uint256", "bytes"], ["0x19", "0x00", from_, to, self.value, solidity_keccak(["bytes"], [self.data]), self.fees, currency_network_of_fees, self.nonce, self.extra_data])
 
     def signed(self, key: PrivateKey) -> "MetaTransaction":
         return attr.evolve(self, signature=sign_msg_hash(self.hash, key=key))
@@ -124,28 +77,18 @@ class Delegate:
         self._web3 = web3
         self._identity_contract_abi = identity_contract_abi
 
-    def estimate_gas_signed_meta_transaction(
-        self, signed_meta_transaction: MetaTransaction
-    ):
-        return self._meta_transaction_function_call(
-            signed_meta_transaction
-        ).estimateGas({"from": self.delegate_address})
+    def estimate_gas_signed_meta_transaction(self, signed_meta_transaction: MetaTransaction):
+        return self._meta_transaction_function_call(signed_meta_transaction).estimateGas({"from": self.delegate_address})
 
-    def send_signed_meta_transaction(
-        self, signed_meta_transaction: MetaTransaction, gas: int = MAX_GAS
-    ) -> str:
+    def send_signed_meta_transaction(self, signed_meta_transaction: MetaTransaction, gas: int = MAX_GAS) -> str:
         """
         Sends the meta transaction out inside of an ethereum transaction
         Returns: the hash of the envelop ethereum transaction
         """
 
-        return self._meta_transaction_function_call(signed_meta_transaction).transact(
-            {"from": self.delegate_address, "gas": gas}
-        )
+        return self._meta_transaction_function_call(signed_meta_transaction).transact({"from": self.delegate_address, "gas": gas})
 
-    def validate_meta_transaction(
-        self, signed_meta_transaction: MetaTransaction
-    ) -> bool:
+    def validate_meta_transaction(self, signed_meta_transaction: MetaTransaction) -> bool:
         """Validates the fields of the meta transaction against the state of
         the identity contract.
 
@@ -154,9 +97,7 @@ class Delegate:
         UnexpectedIdentityContractException, if it could not find the
         check in the contract.
         """
-        return self.validate_nonce(signed_meta_transaction) and self.validate_signature(
-            signed_meta_transaction
-        )
+        return self.validate_nonce(signed_meta_transaction) and self.validate_signature(signed_meta_transaction)
 
     def validate_nonce(self, signed_meta_transaction: MetaTransaction):
         """Validates the nonce by using the provided check by the identity
@@ -170,13 +111,9 @@ class Delegate:
             raise ValueError("From has to be set")
         contract = self._get_identity_contract(from_)
         try:
-            nonce_valid = contract.functions.validateNonce(
-                signed_meta_transaction.nonce, signed_meta_transaction.hash
-            ).call()
+            nonce_valid = contract.functions.validateNonce(signed_meta_transaction.nonce, signed_meta_transaction.hash).call()
         except BadFunctionCallOutput:
-            raise UnexpectedIdentityContractException(
-                "validateNonce function not found"
-            )
+            raise UnexpectedIdentityContractException("validateNonce function not found")
 
         return nonce_valid
 
@@ -193,13 +130,9 @@ class Delegate:
 
         contract = self._get_identity_contract(from_)
         try:
-            signature_valid = contract.functions.validateSignature(
-                signed_meta_transaction.hash, signed_meta_transaction.signature
-            ).call()
+            signature_valid = contract.functions.validateSignature(signed_meta_transaction.hash, signed_meta_transaction.signature).call()
         except BadFunctionCallOutput:
-            raise UnexpectedIdentityContractException(
-                "validateSignature function not found"
-            )
+            raise UnexpectedIdentityContractException("validateSignature function not found")
 
         return signature_valid
 
@@ -225,17 +158,7 @@ class Delegate:
             raise ValueError("From has to be set")
         contract = self._get_identity_contract(from_)
 
-        return contract.functions.executeTransaction(
-            signed_meta_transaction.from_,
-            signed_meta_transaction.to,
-            signed_meta_transaction.value,
-            signed_meta_transaction.data,
-            signed_meta_transaction.fees,
-            signed_meta_transaction.currency_network_of_fees,
-            signed_meta_transaction.nonce,
-            signed_meta_transaction.extra_data,
-            signed_meta_transaction.signature,
-        )
+        return contract.functions.executeTransaction(signed_meta_transaction.from_, signed_meta_transaction.to, signed_meta_transaction.value, signed_meta_transaction.data, signed_meta_transaction.fees, signed_meta_transaction.currency_network_of_fees, signed_meta_transaction.nonce, signed_meta_transaction.extra_data, signed_meta_transaction.signature)
 
 
 class Identity:
@@ -255,20 +178,14 @@ class Identity:
         meta_transaction = attr.evolve(meta_transaction, from_=self.address)
 
         if meta_transaction.nonce is None:
-            meta_transaction = attr.evolve(
-                meta_transaction, nonce=self.get_next_nonce()
-            )
+            meta_transaction = attr.evolve(meta_transaction, nonce=self.get_next_nonce())
 
         return meta_transaction
 
-    def signed_meta_transaction(
-        self, meta_transaction: MetaTransaction
-    ) -> MetaTransaction:
+    def signed_meta_transaction(self, meta_transaction: MetaTransaction) -> MetaTransaction:
         return meta_transaction.signed(self._owner_private_key)
 
-    def filled_and_signed_meta_transaction(
-        self, meta_transaction: MetaTransaction
-    ) -> MetaTransaction:
+    def filled_and_signed_meta_transaction(self, meta_transaction: MetaTransaction) -> MetaTransaction:
         meta_transaction = self.defaults_filled(meta_transaction)
         meta_transaction = self.signed_meta_transaction(meta_transaction)
         return meta_transaction
@@ -282,78 +199,48 @@ def get_pinned_proxy_interface():
         return json.load(file)["Proxy"]
 
 
-def deploy_identity_proxy_factory(
-    *, web3: Web3, transaction_options: Dict = None, private_key: bytes = None
-):
+def deploy_identity_proxy_factory(*, web3: Web3, transaction_options: Dict = None, private_key: bytes = None):
     if transaction_options is None:
         transaction_options = {}
 
-    identity_proxy_factory = deploy(
-        "IdentityProxyFactory",
-        web3=web3,
-        transaction_options=transaction_options,
-        private_key=private_key,
-    )
+    identity_proxy_factory = deploy("IdentityProxyFactory", web3=web3, transaction_options=transaction_options, private_key=private_key)
     increase_transaction_options_nonce(transaction_options)
     return identity_proxy_factory
 
 
-def deploy_identity_implementation(
-    *, web3: Web3, transaction_options: Dict = None, private_key: bytes = None
-):
+def deploy_identity_implementation(*, web3: Web3, transaction_options: Dict = None, private_key: bytes = None):
     if transaction_options is None:
         transaction_options = {}
 
-    indentity_implementation = deploy(
-        "Identity",
-        web3=web3,
-        transaction_options=transaction_options,
-        private_key=private_key,
-    )
+    indentity_implementation = deploy("Identity", web3=web3, transaction_options=transaction_options, private_key=private_key)
     increase_transaction_options_nonce(transaction_options)
     return indentity_implementation
 
 
 def deploy_proxied_identity(web3, factory_address, implementation_address, signature):
-    owner = recover_proxy_deployment_signature_owner(
-        web3, factory_address, implementation_address, signature
-    )
+    owner = recover_proxy_deployment_signature_owner(web3, factory_address, implementation_address, signature)
 
     interface = get_pinned_proxy_interface()
-    initcode = build_initcode(
-        contract_abi=interface["abi"],
-        contract_bytecode=interface["bytecode"],
-        constructor_args=[owner],
-    )
+    initcode = build_initcode(contract_abi=interface["abi"], contract_bytecode=interface["bytecode"], constructor_args=[owner])
 
     factory_interface = get_contract_interface("IdentityProxyFactory")
     factory = web3.eth.contract(address=factory_address, abi=factory_interface["abi"])
 
-    function_call = factory.functions.deployProxy(
-        initcode, implementation_address, signature
-    )
+    function_call = factory.functions.deployProxy(initcode, implementation_address, signature)
     receipt = send_function_call_transaction(function_call, web3=web3)
 
     deployment_event = factory.events.ProxyDeployment().processReceipt(receipt)
     proxy_address = HexBytes(deployment_event[0]["args"]["proxyAddress"])
 
     computed_proxy_address = build_create2_address(factory_address, initcode)
-    assert (
-        computed_proxy_address == proxy_address
-    ), "The computed proxy address does not match the deployed address found via events"
+    assert computed_proxy_address == proxy_address, "The computed proxy address does not match the deployed address found via events"
 
     identity_interface = get_contract_interface("Identity")
-    proxied_identity = web3.eth.contract(
-        address=proxy_address,
-        abi=identity_interface["abi"],
-        bytecode=identity_interface["bytecode"],
-    )
+    proxied_identity = web3.eth.contract(address=proxy_address, abi=identity_interface["abi"], bytecode=identity_interface["bytecode"])
     return proxied_identity
 
 
-def recover_proxy_deployment_signature_owner(
-    web3, factory_address, implementation_address, signature
-):
+def recover_proxy_deployment_signature_owner(web3, factory_address, implementation_address, signature):
     abi_types = ["bytes1", "bytes1", "address", "address"]
     signed_values = ["0x19", "0x00", factory_address, implementation_address]
     signed_hash = Web3.solidityKeccak(abi_types, signed_values)

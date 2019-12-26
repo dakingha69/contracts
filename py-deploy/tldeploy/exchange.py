@@ -2,21 +2,7 @@ from tldeploy.signing import solidity_keccak, eth_sign
 
 
 class Order(object):
-    def __init__(
-        self,
-        exchange_address,
-        maker_address,
-        taker_address,
-        maker_token,
-        taker_token,
-        fee_recipient,
-        maker_token_amount,
-        taker_token_amount,
-        maker_fee,
-        taker_fee,
-        expiration_timestamp_in_sec,
-        salt,
-    ):
+    def __init__(self, exchange_address, maker_address, taker_address, maker_token, taker_token, fee_recipient, maker_token_amount, taker_token_amount, maker_fee, taker_fee, expiration_timestamp_in_sec, salt):
         self.exchange_address = exchange_address
         self.maker_address = maker_address
         self.taker_address = taker_address
@@ -31,36 +17,7 @@ class Order(object):
         self.salt = salt
 
     def hash(self):
-        return solidity_keccak(
-            [
-                "address",
-                "address",
-                "address",
-                "address",
-                "address",
-                "address",
-                "uint256",
-                "uint256",
-                "uint256",
-                "uint256",
-                "uint256",
-                "uint256",
-            ],
-            [
-                self.exchange_address,
-                self.maker_address,
-                self.taker_address,
-                self.maker_token,
-                self.taker_token,
-                self.fee_recipient,
-                self.maker_token_amount,
-                self.taker_token_amount,
-                self.maker_fee,
-                self.taker_fee,
-                self.expiration_timestamp_in_sec,
-                self.salt,
-            ],
-        )
+        return solidity_keccak(["address", "address", "address", "address", "address", "address", "uint256", "uint256", "uint256", "uint256", "uint256", "uint256"], [self.exchange_address, self.maker_address, self.taker_address, self.maker_token, self.taker_token, self.fee_recipient, self.maker_token_amount, self.taker_token_amount, self.maker_fee, self.taker_fee, self.expiration_timestamp_in_sec, self.salt])
 
     def sign(self, key):
         return eth_sign(self.hash(), key)
