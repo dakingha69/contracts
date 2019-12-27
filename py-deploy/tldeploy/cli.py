@@ -9,7 +9,7 @@ from eth_utils import is_checksum_address, to_checksum_address
 import pendulum
 from tldeploy.identity import deploy_identity_implementation, deploy_identity_proxy_factory
 
-from .core import deploy_exchange, deploy_network, deploy_networks, deploy_unw_eth
+from .core import deploy_exchange, deploy_network, deploy_networks, deploy_unw_eth, register_network
 
 
 def report_version():
@@ -242,3 +242,27 @@ def deploy_networks(jsonrpc: str, gas: int, gas_price: int, nonce: int, auto_non
         contract = deploy_network(web3, names[i], symbols[i], decimals[i], fee_divisor=fee_divisors[i], default_interest_rate=0, custom_interests=custom_interests[i], prevent_mediator_interests=prevent_mediator_interests, currency_network_contract_name="CurrencyNetwork", expiration_time=expiration_time, transaction_options=transaction_options, private_key=private_key)
 
         click.echo("CurrencyNetwork(name={name}: {address}".format(name=names[i], address=to_checksum_address(contract.address)))
+
+
+@cli.command(short_help="Deploy a set of currency network contract for issue 785.")
+@jsonrpc_option
+@gas_option
+@gas_price_option
+@nonce_option
+@auto_nonce_option
+@keystore_option
+def register_networks(jsonrpc: str, gas: int, gas_price: int, nonce: int, auto_nonce: bool, keystore: str):
+    """Deploy a currency network contract with custom settings and optionally connect it to an exchange contract"""
+
+    web3 = connect_to_json_rpc(jsonrpc)
+    private_key = retrieve_private_key(keystore)
+    nonce = get_nonce(web3=web3, nonce=nonce, auto_nonce=auto_nonce, private_key=private_key)
+    transaction_options = build_transaction_options(gas=gas, gas_price=gas_price, nonce=nonce)
+
+    networks = ['0x...']
+    registry_address = "0x..."
+
+    for i in range(46):
+        tx_receipt = register_network(web3, registry_address, networks[i], transaction_options=transaction_options)
+
+        click.echo("CurrencyNetwork registered: {address}".format(address=to_checksum_address(networks[i])))

@@ -113,3 +113,12 @@ def deploy_identity(web3, owner_address):
     send_function_call_transaction(function_call, web3=web3)
 
     return identity
+
+
+def register_network(web3, registry_address, network_address, *, transaction_options):
+    abi = contracts["CurrencyNetworkRegistry"]["abi"]
+    bytecode = contracts["CurrencyNetworkRegistry"]["bytecode"]
+    registry_contract = web3.eth.contract(abi=abi, bytecode=bytecode, address=registry_address)
+
+    function_call = registry_contract.functions.addCurrencyNetwork(network_address)
+    return send_function_call_transaction(function_call, web3=web3, transaction_options=transaction_options)
