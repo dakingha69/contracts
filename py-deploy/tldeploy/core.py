@@ -48,7 +48,7 @@ def deploy(
     web3: Web3,
     transaction_options: Dict = None,
     private_key: bytes = None,
-    constructor_args=()
+    constructor_args=(),
 ):
     if transaction_options is None:
         transaction_options = {}
@@ -85,7 +85,7 @@ def deploy_unw_eth(
     web3: Web3,
     transaction_options: Dict = None,
     private_key: bytes = None,
-    exchange_address=None
+    exchange_address=None,
 ):
     if transaction_options is None:
         transaction_options = {}
@@ -184,7 +184,7 @@ def deploy_networks(web3, network_settings, currency_network_contract_name=None)
             web3,
             exchange_address=exchange.address,
             currency_network_contract_name=currency_network_contract_name,
-            **network_setting
+            **network_setting,
         )
         for network_setting in network_settings
     ]
@@ -200,7 +200,9 @@ def deploy_identity(web3, owner_address):
     return identity
 
 
-def register_network(web3, registry_address, network_address, *, transaction_options):
+def register_network(
+    web3, registry_address, network_address, *, transaction_options, private_key
+):
     abi = contracts["CurrencyNetworkRegistry"]["abi"]
     bytecode = contracts["CurrencyNetworkRegistry"]["bytecode"]
     registry_contract = web3.eth.contract(
@@ -209,7 +211,10 @@ def register_network(web3, registry_address, network_address, *, transaction_opt
 
     function_call = registry_contract.functions.addCurrencyNetwork(network_address)
     hash = send_function_call_transaction(
-        function_call, web3=web3, transaction_options=transaction_options
+        function_call,
+        web3=web3,
+        transaction_options=transaction_options,
+        private_key=private_key,
     )
 
     increase_transaction_options_nonce(transaction_options)
