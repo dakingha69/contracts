@@ -6,7 +6,7 @@ import "./Onboarding.sol";
 import "./CurrencyNetworkBasic.sol";
 import "../escrow/Escrow.sol";
 
-import "../lib/math/SafeMath.sol";
+import "../lib/SafeMathLib.sol";
 import "../lib/Address.sol";
 
 
@@ -14,21 +14,40 @@ import "../lib/Address.sol";
  * CurrencyNetworkGateway
  **/
 contract CurrencyNetworkGateway {
+    using SafeMathLib for uint256;
+
+    address public gatedCurrencyNetwork;
     // Specifies the rate user gets his collateral exchanged in max. IOUs.
     // Denominations are GWEI to IOU.
-    // For simplicity and testing we set a rate of 1.
-    uint64 constant EXCHANGE_RATE = 1;
-
-    using SafeMath for uint256;
-
-    uint64 private exchangeRate;
+    uint64 public exchangeRate;
+    // Escrow contract where deposits are accounted.
     Escrow escrow;
 
-    constructor() public {
-        // Currently setting a hard coded exchange rate.
-        // Should be dynamic though, with Oracles for example.
-        exchangeRate = EXCHANGE_RATE;
+    event ExchangeRateChanged(
+        uint64 _changedExchangeRate
+    );
+
+    constructor(
+        address _gatedCurrencyNetwork,
+        uint64 _initialExchangeRate
+    ) public {
+        require(_gatedCurrencyNetwork != address(0), "CurrencyNetwork to gateway is 0x address");
+
+        require(_initialExchangeRate > 0, "Exchange rate is 0");
+
+        gatedCurrencyNetwork = _gatedCurrencyNetwork;
+        exchangeRate = _initialExchangeRate;
         escrow = new Escrow();
+    }
+
+    function setExchangeRate(
+        uint64 _exchangeRate
+    )
+        external
+    {
+        require(_exchangeRate > 0, "Exchange rate is 0");
+        exchangeRate = _exchangeRate;
+        emit ExchangeRateChanged(exchangeRate);
     }
 
     function openCollateralizedTrustline(
@@ -79,7 +98,11 @@ contract CurrencyNetworkGateway {
         escrow.withdrawWithGas(msg.sender);
     }
 
-    function depositsOf(address payee) public view returns (uint256) {
+    function depositsOf(address payee) external view returns (uint256) {
         return escrow.depositsOf(payee);
+    }
+
+    function escrowAddress() external view returns (address) {
+        return address(escrow);
     }
 }
