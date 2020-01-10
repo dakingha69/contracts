@@ -112,6 +112,20 @@ def deploy_unw_eth(
 
     return unw_eth
 
+def deploy_network_gateway(
+    web3,
+    gated_network,
+    initial_exchange_rate=1,
+):
+    network_gateway = deploy(
+        "CurrencyNetworkGateway",
+        web3=web3,
+        constructor_args=(
+            gated_network,
+            initial_exchange_rate
+        )
+    )
+    return network_gateway
 
 def deploy_network(
     web3,
@@ -189,7 +203,17 @@ def deploy_networks(web3, network_settings, currency_network_contract_name=None)
         for network_setting in network_settings
     ]
 
-    return networks, exchange, unw_eth
+    network_gateways = [
+        deploy_network_gateway(
+            web3,
+            gated_network=network.address,
+            # default exchange rate of 1 for now
+            initial_exchange_rate=1,
+        )
+        for network in networks
+    ]
+
+    return networks, exchange, unw_eth, network_gateways
 
 
 def deploy_identity(web3, owner_address):
