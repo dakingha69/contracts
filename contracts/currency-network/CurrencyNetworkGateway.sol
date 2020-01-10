@@ -51,7 +51,6 @@ contract CurrencyNetworkGateway {
     }
 
     function openCollateralizedTrustline(
-        address _currencyNetwork,
         uint64 _creditlineGivenToGateway
     )
         payable 
@@ -64,7 +63,7 @@ contract CurrencyNetworkGateway {
         uint64 collateral = uint64(msg.value);
         uint64 creditlineReceivedFromGateway = exchangeRate * collateral;
 
-        CurrencyNetworkBasic currencyNetwork = CurrencyNetworkBasic(_currencyNetwork);
+        CurrencyNetworkBasic currencyNetwork = CurrencyNetworkBasic(gatedCurrencyNetwork);
         currencyNetwork.updateTrustline(
             msg.sender,
             creditlineReceivedFromGateway,
@@ -75,13 +74,11 @@ contract CurrencyNetworkGateway {
         );
     }
 
-    function closeCollateralizedTrustline(
-        address _currencyNetwork
-    )
+    function closeCollateralizedTrustline()
         payable
         external 
     {
-        CurrencyNetworkBasic currencyNetwork = CurrencyNetworkBasic(_currencyNetwork);
+        CurrencyNetworkBasic currencyNetwork = CurrencyNetworkBasic(gatedCurrencyNetwork);
         int balance = currencyNetwork.balance(
             address(this),
             msg.sender
