@@ -2,7 +2,7 @@ pragma solidity ^0.5.8;
 
 import "../lib/Address.sol";
 import "../lib/Secondary.sol";
-import "../lib/math/SafeMath.sol";
+import "../lib/SafeMathLib.sol";
 
  /**
   * @title Escrow
@@ -18,7 +18,7 @@ import "../lib/math/SafeMath.sol";
   * to the escrow's deposit and withdraw.
   */
 contract Escrow is Secondary {
-    using SafeMath for uint256;
+    using SafeMathLib for uint256;
     using Address for address payable;
 
     event Deposited(address indexed payee, uint256 weiAmount);
