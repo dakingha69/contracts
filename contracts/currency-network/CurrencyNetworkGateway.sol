@@ -1,8 +1,6 @@
 pragma solidity ^0.5.8;
 
 
-import "./DebtTracking.sol";
-import "./Onboarding.sol";
 import "./CurrencyNetworkBasic.sol";
 import "../escrow/Escrow.sol";
 
@@ -16,12 +14,12 @@ import "../lib/Address.sol";
 contract CurrencyNetworkGateway {
     using SafeMathLib for uint256;
 
-    address public gatedCurrencyNetwork;
     // Specifies the rate user gets his collateral exchanged in max. IOUs.
     // Denominations are GWEI to IOU.
     uint64 public exchangeRate;
     // Escrow contract where deposits are accounted.
     Escrow escrow;
+    CurrencyNetworkBasic gatedCurrencyNetwork;
 
     event ExchangeRateChanged(
         uint64 _changedExchangeRate
@@ -35,9 +33,13 @@ contract CurrencyNetworkGateway {
 
         require(_initialExchangeRate > 0, "Exchange rate is 0");
 
-        gatedCurrencyNetwork = _gatedCurrencyNetwork;
+        gatedCurrencyNetwork = CurrencyNetworkBasic(_gatedCurrencyNetwork);
         exchangeRate = _initialExchangeRate;
         escrow = new Escrow();
+    }
+
+    function gatedCurrencyNetworkAddress() external view returns (address) {
+        return address(gatedCurrencyNetwork);
     }
 
     function setExchangeRate(
@@ -63,8 +65,7 @@ contract CurrencyNetworkGateway {
         uint64 collateral = uint64(msg.value);
         uint64 creditlineReceivedFromGateway = exchangeRate * collateral;
 
-        CurrencyNetworkBasic currencyNetwork = CurrencyNetworkBasic(gatedCurrencyNetwork);
-        currencyNetwork.updateTrustline(
+        gatedCurrencyNetwork.updateTrustline(
             msg.sender,
             creditlineReceivedFromGateway,
             _creditlineGivenToGateway,
@@ -78,8 +79,7 @@ contract CurrencyNetworkGateway {
         payable
         external 
     {
-        CurrencyNetworkBasic currencyNetwork = CurrencyNetworkBasic(gatedCurrencyNetwork);
-        int balance = currencyNetwork.balance(
+        int balance = gatedCurrencyNetwork.balance(
             address(this),
             msg.sender
         );
