@@ -114,6 +114,8 @@ contract Exchange is SafeMath {
         public
         returns (uint filledTakerTokenAmount)
     {
+        require(shouldThrowOnInsufficientBalanceOrAllowance || !shouldThrowOnInsufficientBalanceOrAllowance);
+
         Order memory order = Order({
             maker: orderAddresses[0],
             taker: orderAddresses[1],
