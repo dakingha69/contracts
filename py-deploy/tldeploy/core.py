@@ -125,7 +125,8 @@ def deploy_network_gateway(
             initial_exchange_rate
         )
     )
-    return network_gateway
+    gateway_escrow_address = network_gateway.functions.escrowAddress().call()
+    return network_gateway, gateway_escrow_address
 
 def deploy_network(
     web3,
@@ -203,7 +204,7 @@ def deploy_networks(web3, network_settings, currency_network_contract_name=None)
         for network_setting in network_settings
     ]
 
-    network_gateways = [
+    network_gateways, gateway_escrow_addresses = zip(*[
         deploy_network_gateway(
             web3,
             gated_network=network.address,
@@ -211,9 +212,9 @@ def deploy_networks(web3, network_settings, currency_network_contract_name=None)
             initial_exchange_rate=1,
         )
         for network in networks
-    ]
+    ])
 
-    return networks, exchange, unw_eth, network_gateways
+    return networks, exchange, unw_eth, network_gateways, gateway_escrow_addresses
 
 
 def deploy_identity(web3, owner_address):

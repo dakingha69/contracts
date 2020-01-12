@@ -23,7 +23,7 @@ contract Escrow is Secondary {
 
     event Deposited(address indexed payee, uint256 weiAmount);
     event Withdrawn(address indexed payee, uint256 weiAmount);
-    event DepositTransferred(address indexed from, address to, uint256 weiAmount);
+    event DepositTransferred(address indexed from, address indexed to, uint256 weiAmount);
 
     mapping(address => uint256) private _deposits;
 

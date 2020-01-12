@@ -393,7 +393,7 @@ def test(
     transaction_options = build_transaction_options(
         gas=gas, gas_price=gas_price, nonce=nonce
     )
-    networks, exchange, unw_eth, network_gateways = deploy_networks(
+    networks, exchange, unw_eth, network_gateways, gateway_escrow_addresses = deploy_networks(
         web3,
         network_settings,
         currency_network_contract_name=currency_network_contract_name,
@@ -411,6 +411,7 @@ def test(
     unw_eth_address = unw_eth.address
     addresses["networks"] = network_addresses
     addresses["network_gateways"] = network_gateway_addresses
+    addresses["gateway_escrows"] = gateway_escrow_addresses
     addresses["exchange"] = exchange_address
     addresses["unwEth"] = unw_eth_address
     addresses["identityImplementation"] = identity_implementation.address
@@ -432,8 +433,14 @@ def test(
             to_checksum_address(identity_implementation.address)
         )
     )
-    for settings, address, gateway_address in zip(network_settings, network_addresses, network_gateway_addresses):
-        settings["gateway_address"] = gateway_address
+    for settings, address, gateway_address, escrow_address in zip(
+        network_settings,
+        network_addresses,
+        network_gateway_addresses,
+        gateway_escrow_addresses
+    ):
+        settings["gateway"] = gateway_address
+        settings["gateway_escrow"] = escrow_address
         click.echo(
             "CurrencyNetwork({settings}) at {address}".format(
                 settings=settings, address=to_checksum_address(address)
