@@ -81,17 +81,14 @@ def gateway_contract_with_opened_trustlines(
 def exchange_rate(gateway_contract):
     return gateway_contract.functions.exchangeRate().call()
 
-
 def test_escrow_address(gateway_contract, escrow_address):
     assert(gateway_contract.functions.escrowAddress().call() == escrow_address)
-
 
 def test_gated_currency_network_address(
     currency_network_contract,
     gateway_contract
 ):
     assert(gateway_contract.functions.gatedCurrencyNetworkAddress().call() == currency_network_contract.address)
-
 
 def test_default_exchange_rate(exchange_rate):
     assert(exchange_rate == 1)
@@ -102,7 +99,6 @@ def test_gateway_global_authorized(
 ):
     assert(currency_network_contract.functions.globalAuthorized(gateway_contract.address).call())
 
-
 def test_set_exchange_rate(gateway_contract):
     gateway_contract.functions.setExchangeRate(2).transact()
 
@@ -112,7 +108,6 @@ def test_set_exchange_rate(gateway_contract):
 def test_empty_deposits_of(gateway_contract, accounts):
     deposit = gateway_contract.functions.depositsOf(accounts[0]).call()
     assert(deposit == 0)
-
 
 def test_open_collateralized_trustline(
     gateway_contract_with_opened_trustlines,
@@ -133,7 +128,6 @@ def test_open_collateralized_trustline(
     assert(creditline_given_to_gateway == CL_GIVEN_TO_GW)
     assert(creditline_received_from_gateway == exchange_rate * COLLATERAL)
     assert(gateway_contract_with_opened_trustlines.functions.totalDeposit().call() == COLLATERAL * 2)
-
 
 def test_close_collateralized_trustline_positive_balance(
     gateway_contract_with_opened_trustlines,
@@ -166,7 +160,6 @@ def test_close_collateralized_trustline_positive_balance(
     assert(total_deposit_before_close == COLLATERAL * 2)
     assert(total_deposit_after_close == COLLATERAL * 2 - (deposit_before_close - transfer_value / exchange_rate))
     assert(creditline_after_close == 0)
-
 
 def test_close_collateralized_trustline_negative_balance(
     gateway_contract_with_opened_trustlines,
@@ -203,7 +196,3 @@ def test_close_collateralized_trustline_negative_balance(
     assert(total_deposit_before_close == COLLATERAL * 2)
     assert(total_deposit_after_close == COLLATERAL * 2 - (deposit_before_close - transfer_value / exchange_rate))
     assert(creditline_after_close == 0)
-
-
-
-
