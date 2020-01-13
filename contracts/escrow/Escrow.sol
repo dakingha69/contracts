@@ -23,9 +23,13 @@ contract Escrow is Secondary {
 
     event Deposited(address indexed payee, uint256 weiAmount);
     event Withdrawn(address indexed payee, uint256 weiAmount);
-    event DepositTransferred(address indexed from, address indexed to, uint256 weiAmount);
 
+    // TODO: Add beneficiary
     mapping(address => uint256) private _deposits;
+
+    function totalDeposit() public view returns (uint256) {
+      return address(this).balance;
+    }
 
     function depositsOf(address payee) public view returns (uint256) {
         return _deposits[payee];
@@ -82,21 +86,21 @@ contract Escrow is Secondary {
         emit Withdrawn(payee, payment);
     }
 
-    function transferDeposit(
-      address from,
-      address payable to,
+    function withdrawPartial(
+      address payable payee,
       uint256 amount
     ) 
       public
       onlyPrimary
     {
-      require(_deposits[from] >= amount, "Transfer amount higher than deposit");
+      require(_deposits[payee] >= amount, "Amount higher than deposit");
 
-      _deposits[from].sub(amount);
-      _deposits[to].add(amount);
+      uint256 remainingDeposit = _deposits[payee].sub(amount);
 
-      to.sendValue(amount);
+      _deposits[payee] = 0;
 
-      emit DepositTransferred(from, to, amount);
+      payee.sendValue(remainingDeposit);
+
+      emit Withdrawn(payee, amount);
     }
 }
