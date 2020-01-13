@@ -112,18 +112,10 @@ def deploy_unw_eth(
 
     return unw_eth
 
-def deploy_network_gateway(
-    web3,
-    gated_network,
-    initial_exchange_rate=1,
-):
+def deploy_network_gateway(web3):
     network_gateway = deploy(
         "CurrencyNetworkGateway",
-        web3=web3,
-        constructor_args=(
-            gated_network,
-            initial_exchange_rate
-        )
+        web3=web3
     )
     gateway_escrow_address = network_gateway.functions.escrowAddress().call()
     return network_gateway, gateway_escrow_address
@@ -134,6 +126,7 @@ def deploy_network(
     symbol,
     decimals,
     expiration_time,
+    gateway_contract=None,
     fee_divisor=0,
     default_interest_rate=0,
     custom_interests=True,
@@ -163,6 +156,17 @@ def deploy_network(
         private_key=private_key,
     )
     increase_transaction_options_nonce(transaction_options)
+
+    if (gateway_contract is not None):
+        authorized_addresses.append(gateway_contract.address)
+        init_gateway_call = gateway_contract.functions.init(currency_network.address, 1)
+        send_function_call_transaction(
+            init_gateway_call,
+            web3=web3,
+            transaction_options=transaction_options,
+            private_key=private_key,
+        )
+        increase_transaction_options_nonce(transaction_options)
 
     if exchange_address is not None:
         authorized_addresses.append(exchange_address)
@@ -194,25 +198,21 @@ def deploy_networks(web3, network_settings, currency_network_contract_name=None)
     exchange = deploy_exchange(web3=web3)
     unw_eth = deploy_unw_eth(web3=web3, exchange_address=exchange.address)
 
+    network_gateways, gateway_escrow_addresses = zip(*[
+        deploy_network_gateway(web3)
+        for i in range(0, len(network_settings)) 
+    ])
+
     networks = [
         deploy_network(
             web3,
             exchange_address=exchange.address,
             currency_network_contract_name=currency_network_contract_name,
+            gateway_contract=network_gateways[index],
             **network_setting,
         )
-        for network_setting in network_settings
+        for index, network_setting in enumerate(network_settings)
     ]
-
-    network_gateways, gateway_escrow_addresses = zip(*[
-        deploy_network_gateway(
-            web3,
-            gated_network=network.address,
-            # default exchange rate of 1 for now
-            initial_exchange_rate=1,
-        )
-        for network in networks
-    ])
 
     return networks, exchange, unw_eth, network_gateways, gateway_escrow_addresses
 
