@@ -126,8 +126,16 @@ def deploy_network_gateway(web3):
         "CurrencyNetworkGateway",
         web3=web3
     )
-    gateway_escrow_address = network_gateway.functions.escrowAddress().call()
+    gateway_escrow_address = network_gateway.functions.getEscrow().call()
     return network_gateway, gateway_escrow_address
+
+
+def deploy_network_shield(web3):
+    network_shield = deploy(
+        "CurrencyNetworkShield",
+        web3=web3,
+    )
+    return network_shield
 
 
 def deploy_network(
@@ -137,6 +145,8 @@ def deploy_network(
     decimals,
     expiration_time,
     gateway_contract=None,
+    shield_contract=None,
+    verifier_contract=None,
     fee_divisor=0,
     default_interest_rate=0,
     custom_interests=True,
@@ -178,6 +188,21 @@ def deploy_network(
         )
         increase_transaction_options_nonce(transaction_options)
 
+        # Shield contract can only be initialized with verifier and gateway
+        if (verifier_contract is not None and shield_contract is not None):
+            authorized_addresses.append(shield_contract.address)
+            init_shield_call = shield_contract.functions.init(
+                verifier_contract.address,
+                gateway_contract.address
+            )
+            send_function_call_transaction(
+                init_shield_call,
+                web3=web3,
+                transaction_options=transaction_options,
+                private_key=private_key
+            )
+            increase_transaction_options_nonce(transaction_options)
+
     if exchange_address is not None:
         authorized_addresses.append(exchange_address)
 
@@ -204,15 +229,22 @@ def deploy_network(
     return currency_network
 
 
-def deploy_networks(web3, network_settings, currency_network_contract_name=None):
+def deploy_networks(
+    web3,
+    network_settings,
+    currency_network_contract_name=None
+):
     exchange = deploy_exchange(web3=web3)
     unw_eth = deploy_unw_eth(web3=web3, exchange_address=exchange.address)
 
     verifier = deploy_verifier(web3=web3)
 
+    network_shields = [
+        deploy_network_shield(web3) for i in range(0, len(network_settings))
+    ]
+
     network_gateways, gateway_escrow_addresses = zip(*[
-        deploy_network_gateway(web3)
-        for i in range(0, len(network_settings)) 
+        deploy_network_gateway(web3) for i in range(0, len(network_settings)) 
     ])
 
     networks = [
@@ -221,12 +253,14 @@ def deploy_networks(web3, network_settings, currency_network_contract_name=None)
             exchange_address=exchange.address,
             currency_network_contract_name=currency_network_contract_name,
             gateway_contract=network_gateways[index],
+            shield_contract=network_shields[index],
+            verifier_contract=verifier,
             **network_setting,
         )
         for index, network_setting in enumerate(network_settings)
     ]
 
-    return networks, exchange, unw_eth, network_gateways, gateway_escrow_addresses, verifier
+    return networks, exchange, unw_eth, network_gateways, gateway_escrow_addresses, verifier, network_shields
 
 
 def deploy_identity(web3, owner_address):

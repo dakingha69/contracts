@@ -1,8 +1,8 @@
 pragma solidity ^0.5.8;
 
-import "../lib/Address.sol";
-import "../lib/Secondary.sol";
-import "../lib/SafeMathLib.sol";
+import "./lib/Address.sol";
+import "./lib/Secondary.sol";
+import "./lib/SafeMathLib.sol";
 
  /**
   * @title Escrow

@@ -2,7 +2,7 @@ pragma solidity ^0.5.8;
 
 
 import "./CurrencyNetworkBasic.sol";
-import "../escrow/Escrow.sol";
+import "../Escrow.sol";
 
 import "../lib/SafeMathLib.sol";
 import "../lib/Address.sol";
@@ -21,7 +21,7 @@ contract CurrencyNetworkGateway {
     uint64 public exchangeRate;
     // Escrow contract where deposits are accounted.
     Escrow escrow;
-    CurrencyNetworkBasic gatedCurrencyNetwork;
+    CurrencyNetworkBasic currencyNetwork;
 
     event ExchangeRateChanged(
         uint64 _changedExchangeRate
@@ -34,22 +34,22 @@ contract CurrencyNetworkGateway {
     function () external payable {}
 
     function init(
-        address _gatedCurrencyNetwork,
+        address _currencyNetwork,
         uint64 _initialExchangeRate
     ) public {
         require(!isInitialized, "Already initialized");
 
-        require(_gatedCurrencyNetwork != address(0), "CurrencyNetwork to gateway is 0x address");
+        require(_currencyNetwork != address(0), "CurrencyNetwork to gateway is 0x address");
 
         require(_initialExchangeRate > 0, "Exchange rate is 0");
 
         isInitialized = true;
-        gatedCurrencyNetwork = CurrencyNetworkBasic(_gatedCurrencyNetwork);
+        currencyNetwork = CurrencyNetworkBasic(_currencyNetwork);
         exchangeRate = _initialExchangeRate;
     }
 
-    function gatedCurrencyNetworkAddress() external view returns (address) {
-        return address(gatedCurrencyNetwork);
+    function getCurrencyNetwork() external view returns (address) {
+        return address(currencyNetwork);
     }
 
     function setExchangeRate(
@@ -75,7 +75,7 @@ contract CurrencyNetworkGateway {
         uint64 collateral = uint64(msg.value);
         uint64 creditlineReceivedFromGateway = exchangeRate * collateral;
 
-        gatedCurrencyNetwork.updateTrustline(
+        currencyNetwork.updateTrustline(
             msg.sender,
             creditlineReceivedFromGateway,
             _creditlineGivenToGateway,
@@ -89,7 +89,7 @@ contract CurrencyNetworkGateway {
         payable
         external 
     {
-        int balance = gatedCurrencyNetwork.balance(
+        int balance = currencyNetwork.balance(
             address(this),
             msg.sender
         );
@@ -103,7 +103,7 @@ contract CurrencyNetworkGateway {
             );
             path[0] = address(this);
             path[1] = msg.sender;
-            gatedCurrencyNetwork.transfer(
+            currencyNetwork.transfer(
                 uint64(balance),
                 0,
                 path,
@@ -117,7 +117,7 @@ contract CurrencyNetworkGateway {
             );
             path[0] = msg.sender;
             path[1] = address(this);
-            gatedCurrencyNetwork.transferFrom(
+            currencyNetwork.transferFrom(
                 uint64(balance * -1),
                 0,
                 path,
@@ -126,7 +126,7 @@ contract CurrencyNetworkGateway {
         } else {
             escrow.withdrawWithGas(msg.sender);
         }
-        gatedCurrencyNetwork.closeTrustline(msg.sender);
+        currencyNetwork.closeTrustline(msg.sender);
     }
 
     function depositsOf(address payee) external view returns (uint256) {
@@ -137,7 +137,7 @@ contract CurrencyNetworkGateway {
         return escrow.totalDeposit();
     }
 
-    function escrowAddress() external view returns (address) {
+    function getEscrow() external view returns (address) {
         return address(escrow);
     }
 }
