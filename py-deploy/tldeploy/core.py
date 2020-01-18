@@ -112,6 +112,15 @@ def deploy_unw_eth(
 
     return unw_eth
 
+
+def deploy_verifier(web3):
+    verifier = deploy(
+        "Verifier",
+        web3=web3,
+    )
+    return verifier
+
+
 def deploy_network_gateway(web3):
     network_gateway = deploy(
         "CurrencyNetworkGateway",
@@ -119,6 +128,7 @@ def deploy_network_gateway(web3):
     )
     gateway_escrow_address = network_gateway.functions.escrowAddress().call()
     return network_gateway, gateway_escrow_address
+
 
 def deploy_network(
     web3,
@@ -198,6 +208,8 @@ def deploy_networks(web3, network_settings, currency_network_contract_name=None)
     exchange = deploy_exchange(web3=web3)
     unw_eth = deploy_unw_eth(web3=web3, exchange_address=exchange.address)
 
+    verifier = deploy_verifier(web3=web3)
+
     network_gateways, gateway_escrow_addresses = zip(*[
         deploy_network_gateway(web3)
         for i in range(0, len(network_settings)) 
@@ -214,7 +226,7 @@ def deploy_networks(web3, network_settings, currency_network_contract_name=None)
         for index, network_setting in enumerate(network_settings)
     ]
 
-    return networks, exchange, unw_eth, network_gateways, gateway_escrow_addresses
+    return networks, exchange, unw_eth, network_gateways, gateway_escrow_addresses, verifier
 
 
 def deploy_identity(web3, owner_address):
@@ -223,3 +235,4 @@ def deploy_identity(web3, owner_address):
     send_function_call_transaction(function_call, web3=web3)
 
     return identity
+
