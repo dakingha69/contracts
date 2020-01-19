@@ -81,14 +81,14 @@ def gateway_contract_with_opened_trustlines(
 def exchange_rate(gateway_contract):
     return gateway_contract.functions.exchangeRate().call()
 
-def test_escrow_address(gateway_contract, escrow_address):
-    assert(gateway_contract.functions.escrowAddress().call() == escrow_address)
+def test_get_escrow(gateway_contract, escrow_address):
+    assert(gateway_contract.functions.getEscrow().call() == escrow_address)
 
-def test_gated_currency_network_address(
+def test_get_currency_network(
     currency_network_contract,
     gateway_contract
 ):
-    assert(gateway_contract.functions.gatedCurrencyNetworkAddress().call() == currency_network_contract.address)
+    assert(gateway_contract.functions.getCurrencyNetwork().call() == currency_network_contract.address)
 
 def test_default_exchange_rate(exchange_rate):
     assert(exchange_rate == 1)

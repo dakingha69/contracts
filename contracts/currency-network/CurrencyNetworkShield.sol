@@ -85,6 +85,13 @@ contract CurrencyNetworkShield is MerkleTree {
     }
 
     /**
+    Get address of connected currency network
+     */
+    function getCurrencyNetwork() public view returns (address) {
+        return CurrencyNetworkGateway(gateway).getCurrencyNetwork();
+    }
+
+    /**
     function to change the address of the underlying Verifier contract
     TODO: Restrict access
     */
@@ -119,6 +126,17 @@ contract CurrencyNetworkShield is MerkleTree {
         vks[uint(_txType)] = _vk;
 
         emit VkChanged(_txType);
+    }
+
+    /**
+    Returns the registered verification key for given type.
+     */
+    function getVerificationKey(TransactionTypes _txType)
+        external
+        view
+        returns (uint256[] memory)
+    {
+        return vks[uint(_txType)];
     }
 
     /**
