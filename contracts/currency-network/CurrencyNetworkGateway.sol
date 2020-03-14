@@ -65,8 +65,8 @@ contract CurrencyNetworkGateway {
     function openCollateralizedTrustline(
         uint64 _creditlineGivenToGateway
     )
-        payable 
         external
+        payable
     {
         // Deposit msg.value in escrow
         escrow.deposit.value(msg.value)(msg.sender);
@@ -86,8 +86,8 @@ contract CurrencyNetworkGateway {
     }
 
     function closeCollateralizedTrustline()
+        external
         payable
-        external 
     {
         int balance = currencyNetwork.balance(
             address(this),

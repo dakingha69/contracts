@@ -89,7 +89,7 @@ contract Escrow is Secondary {
     function withdrawPartial(
       address payable payee,
       uint256 amount
-    ) 
+    )
       public
       onlyPrimary
     {

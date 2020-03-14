@@ -346,7 +346,7 @@ contract CurrencyNetworkShield is MerkleTree {
         gasUsedByShieldContract = gasUsedByShieldContract + gasCheckpoint - gasleft();
         gasCheckpoint = gasleft();
 
-        //Finally, transfer the IOU tokens from gateway to the nominated address
+        //Finally, transfer the IOU tokens from gateway to the payTO address
         CurrencyNetworkBasic currencyNetwork = CurrencyNetworkBasic(
             CurrencyNetworkGateway(gateway).getCurrencyNetwork()
         );
@@ -354,7 +354,7 @@ contract CurrencyNetworkShield is MerkleTree {
         address[] memory path = new address[](2);
         path[0] = address(gateway);
         path[1] = payToAddress;
-        currencyNetwork.transfer(_value, 0, path, "");
+        currencyNetwork.transferFrom(_value, 0, path, "");
 
         // gas measurement
         uint256 gasUsedByCurrencyNetworkContract = gasCheckpoint - gasleft();
