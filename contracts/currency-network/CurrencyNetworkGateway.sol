@@ -73,6 +73,7 @@ contract CurrencyNetworkGateway {
 
         // TODO: Handle casting properly
         uint64 collateral = uint64(msg.value);
+        // TODO: top up existing creditline
         uint64 creditlineReceivedFromGateway = exchangeRate * collateral;
 
         currencyNetwork.updateTrustline(
