@@ -55,11 +55,11 @@ contract CurrencyNetworkGateway {
         collateralManager.lock.value(msg.value)(msg.sender);
 
         // Convert msg.value to IOU
-        uint256 creditlineReceivedFromGateway = collateralManager.convertToIOU(msg.value);
+        uint256 creditlineReceivedFromGateway = collateralManager.collateralToDebt(msg.value);
 
         currencyNetwork.updateTrustline(
             msg.sender,
-            creditlineReceivedFromGateway,
+            uint64(creditlineReceivedFromGateway),
             _creditlineGivenToGateway,
             0,
             0,
@@ -79,14 +79,14 @@ contract CurrencyNetworkGateway {
         require(value > 0, "IOUs to claim is 0");
         require(balance >= value, "IOUs to claim exceed balance");
 
-        uint256 claimInCollateral = collateralManager.convertFromIOU(uint256(value));
+        uint256 claimInCollateral = collateralManager.debtToCollateral(uint256(value));
         collateralManager.fill(msg.sender, claimInCollateral);
 
         address[] memory path = new address[](2);
         path[0] = address(this);
         path[1] = msg.sender;
         currencyNetwork.transfer(
-            balance,
+            uint64(balance),
             0,
             path,
             ""
@@ -105,7 +105,7 @@ contract CurrencyNetworkGateway {
         require(value > 0, "IOUs to pay is 0");
         require(balance >= value, "IOUs to pay exceed balance");
 
-        uint256 payOffInCollateral = collateralManager.convertFromIOU(uint256(value));
+        uint256 payOffInCollateral = collateralManager.debtToCollateral(uint256(value));
         collateralManager.draw(msg.sender, payOffInCollateral);
 
         address[] memory path = new address[](2);
