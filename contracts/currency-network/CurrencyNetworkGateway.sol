@@ -2,7 +2,7 @@ pragma solidity ^0.5.8;
 
 
 import "./CurrencyNetworkBasic.sol";
-import "../Escrow.sol";
+import "../collateral/ICollateralManager.sol";
 
 import "../lib/SafeMathLib.sol";
 import "../lib/Address.sol";
@@ -16,50 +16,33 @@ contract CurrencyNetworkGateway {
     using Address for address payable;
 
     bool private isInitialized;
-    // Specifies the rate user gets his collateral exchanged in max. IOUs.
-    // Denominations are GWEI to IOU.
-    uint64 public exchangeRate;
-    // Escrow contract where deposits are accounted.
-    Escrow escrow;
+
+    ICollateralManager collateralManager;
     CurrencyNetworkBasic currencyNetwork;
-
-    event ExchangeRateChanged(
-        uint64 _changedExchangeRate
-    );
-
-    constructor() public {
-        escrow = new Escrow();
-    }
 
     function () external payable {}
 
     function init(
         address _currencyNetwork,
-        uint64 _initialExchangeRate
+        address _collateralManager
     ) public {
         require(!isInitialized, "Already initialized");
 
-        require(_currencyNetwork != address(0), "CurrencyNetwork to gateway is 0x address");
+        require(_currencyNetwork != address(0), "CurrencyNetwork to gate is 0x address");
 
-        require(_initialExchangeRate > 0, "Exchange rate is 0");
+        require(_collateralManager != address(0), "CollateralManager is 0x address");
 
         isInitialized = true;
         currencyNetwork = CurrencyNetworkBasic(_currencyNetwork);
-        exchangeRate = _initialExchangeRate;
+        collateralManager = ICollateralManager(_collateralManager);
     }
 
     function getCurrencyNetwork() external view returns (address) {
         return address(currencyNetwork);
     }
 
-    function setExchangeRate(
-        uint64 _exchangeRate
-    )
-        external
-    {
-        require(_exchangeRate > 0, "Exchange rate is 0");
-        exchangeRate = _exchangeRate;
-        emit ExchangeRateChanged(exchangeRate);
+    function getCollateralManager() external view returns (address) {
+        return address(collateralManager);
     }
 
     function openCollateralizedTrustline(
@@ -68,13 +51,11 @@ contract CurrencyNetworkGateway {
         external
         payable
     {
-        // Deposit msg.value in escrow
-        escrow.deposit.value(msg.value)(msg.sender);
+        // Lock msg.value in collateralManager
+        collateralManager.lock.value(msg.value)(msg.sender);
 
-        // TODO: Handle casting properly
-        uint64 collateral = uint64(msg.value);
-        // TODO: top up existing creditline
-        uint64 creditlineReceivedFromGateway = exchangeRate * collateral;
+        // Convert msg.value to IOU
+        uint256 creditlineReceivedFromGateway = collateralManager.convertToIOU(msg.value);
 
         currencyNetwork.updateTrustline(
             msg.sender,
@@ -86,59 +67,71 @@ contract CurrencyNetworkGateway {
         );
     }
 
-    function closeCollateralizedTrustline()
+    function claim(uint64 value)
         external
-        payable
+    {
+        int balance = currencyNetwork.balance(
+            msg.sender,
+            address(this)
+        );
+
+        require(balance > 0, "No claimable IOUs");
+        require(value > 0, "IOUs to claim is 0");
+        require(balance >= value, "IOUs to claim exceed balance");
+
+        uint256 claimInCollateral = collateralManager.convertFromIOU(uint256(value));
+        collateralManager.fill(msg.sender, claimInCollateral);
+
+        address[] memory path = new address[](2);
+        path[0] = address(this);
+        path[1] = msg.sender;
+        currencyNetwork.transfer(
+            balance,
+            0,
+            path,
+            ""
+        );
+    }
+
+    function payOff(uint64 value)
+        external
     {
         int balance = currencyNetwork.balance(
             address(this),
             msg.sender
         );
-        address[] memory path = new address[](2);
 
-        if (balance > 0) {
-            uint64 partialDeposit = uint64(balance) / exchangeRate;
-            escrow.withdrawPartial(
-                msg.sender,
-                partialDeposit
-            );
-            path[0] = address(this);
-            path[1] = msg.sender;
-            currencyNetwork.transfer(
-                uint64(balance),
-                0,
-                path,
-                ""
-            );
-        } else if (balance < 0) {
-            uint64 partialDeposit = uint64(balance * -1) / exchangeRate;
-            escrow.withdrawPartial(
-                msg.sender,
-                uint256(partialDeposit)
-            );
-            path[0] = msg.sender;
-            path[1] = address(this);
-            currencyNetwork.transferFrom(
-                uint64(balance * -1),
-                0,
-                path,
-                ""
-            );
-        } else {
-            escrow.withdrawWithGas(msg.sender);
-        }
+        require(balance > 0, "No payable IOUs");
+        require(value > 0, "IOUs to pay is 0");
+        require(balance >= value, "IOUs to pay exceed balance");
+
+        uint256 payOffInCollateral = collateralManager.convertFromIOU(uint256(value));
+        collateralManager.draw(msg.sender, payOffInCollateral);
+
+        address[] memory path = new address[](2);
+        path[0] = msg.sender;
+        path[1] = address(this);
+        currencyNetwork.transferFrom(
+            value,
+            0,
+            path,
+            ""
+        );
+    }
+
+    function closeCollateralizedTrustline()
+        external
+    {
+        collateralManager.unlock(msg.sender);
+
         currencyNetwork.closeTrustline(msg.sender);
     }
 
-    function depositsOf(address payee) external view returns (uint256) {
-        return escrow.depositsOf(payee);
+    function collateralOf(address payee) external view returns (uint256) {
+        return collateralManager.collateralOf(payee);
     }
 
-    function totalDeposit() external view returns (uint256) {
-        return escrow.totalDeposit();
-    }
-
-    function getEscrow() external view returns (address) {
-        return address(escrow);
+    function totalCollateral() external view returns (uint256) {
+        return collateralManager.totalCollateral();
     }
 }
