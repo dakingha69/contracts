@@ -146,7 +146,8 @@ contract CurrencyNetworkShield is MerkleTree {
         uint256[] calldata _proof,
         uint256[] calldata _inputs,
         uint64 _value,
-        bytes32 _commitment
+        bytes32 _commitment,
+        address[] calldata _path
     )
         external
     {
@@ -182,10 +183,10 @@ contract CurrencyNetworkShield is MerkleTree {
         CurrencyNetworkBasic currencyNetwork = CurrencyNetworkBasic(
             CurrencyNetworkGateway(gateway).getCurrencyNetwork()
         );
-        address[] memory path = new address[](2);
-        path[0] = msg.sender;
-        path[1] = address(gateway);
-        currencyNetwork.transferFrom(_value, 0, path, "");
+
+        require(_path[_path.length - 1] == address(gateway), "Path end is not Gateway")
+        require(_path[0] == msg.sender, "Path start is not msg.sender")
+        currencyNetwork.transferFrom(_value, 0, _path, "");
 
         // gas measurement:
         uint256 gasUsedByCurrencyNetworkContract = gasCheckpoint - gasleft();
@@ -312,7 +313,8 @@ contract CurrencyNetworkShield is MerkleTree {
         bytes32 _root,
         bytes32 _nullifier,
         uint64 _value,
-        uint256 _payTo
+        uint256 _payTo,
+        address[] calldata _path
     )
         external
     {
@@ -351,10 +353,9 @@ contract CurrencyNetworkShield is MerkleTree {
             CurrencyNetworkGateway(gateway).getCurrencyNetwork()
         );
         address payToAddress = address(_payTo); // we passed _payTo as a uint256, to ensure the packing was correct within the sha256() above
-        address[] memory path = new address[](2);
-        path[0] = address(gateway);
-        path[1] = payToAddress;
-        currencyNetwork.transferFrom(_value, 0, path, "");
+        require(_path[_path.length - 1] == payToAddress, "Path end is not payTo")
+        require(_path[0] == address(gateway), "Path start is not Gateway")
+        currencyNetwork.transferFrom(_value, 0, _path, "");
 
         // gas measurement
         uint256 gasUsedByCurrencyNetworkContract = gasCheckpoint - gasleft();
