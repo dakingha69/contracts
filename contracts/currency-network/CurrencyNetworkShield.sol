@@ -39,7 +39,8 @@ contract CurrencyNetworkShield is MerkleTree {
     // PRIVATE TRANSACTIONS' PUBLIC STATES:
     mapping(bytes32 => bytes32) public nullifiers; // store nullifiers of spent commitments
     mapping(bytes32 => bytes32) public roots; // holds each root we've calculated so that we can pull the one relevant to the prover
-    bytes32 public latestRoot; // holds the index for the latest root so that the prover can provide it later and this contract can look up the relevant root
+    // holds the index for the latest root so that the prover can provide it later and this contract can look up the relevant root
+    bytes32 public latestRoot;
 
     // VERIFICATION KEY STORAGE:
     mapping(uint => uint256[]) public vks; // mapped to by an enum uint(TransactionTypes):
@@ -156,7 +157,8 @@ contract CurrencyNetworkShield is MerkleTree {
 
         // Check that the publicInputHash equals the hash of the 'public inputs':
         bytes31 publicInputHash = bytes31(bytes32(_inputs[0]) << 8);
-        bytes31 publicInputHashCheck = bytes31(sha256(abi.encodePacked(uint128(_value), _commitment)) << 8); // Note that we force the _value to be left-padded with zeros to fill 128-bits, so as to match the padding in the hash calculation performed within the zokrates proof.
+        // Note that we force the _value to be left-padded with zeros to fill 128-bits, so as to match the padding in the hash calculation performed within the zokrates proof.
+        bytes31 publicInputHashCheck = bytes31(sha256(abi.encodePacked(uint128(_value), _commitment)) << 8);
         require(publicInputHashCheck == publicInputHash, "publicInputHash cannot be reconciled");
 
         // gas measurement:
@@ -184,8 +186,8 @@ contract CurrencyNetworkShield is MerkleTree {
             CurrencyNetworkGateway(gateway).getCurrencyNetwork()
         );
 
-        require(_path[_path.length - 1] == address(gateway), "Path end is not Gateway")
-        require(_path[0] == msg.sender, "Path start is not msg.sender")
+        require(_path[_path.length - 1] == address(gateway), "Path end is not Gateway");
+        require(_path[0] == msg.sender, "Path start is not msg.sender");
         currencyNetwork.transferFrom(_value, 0, _path, "");
 
         // gas measurement:
@@ -313,7 +315,6 @@ contract CurrencyNetworkShield is MerkleTree {
         bytes32 _root,
         bytes32 _nullifier,
         uint64 _value,
-        uint256 _payTo,
         address[] calldata _path
     )
         external
@@ -323,7 +324,9 @@ contract CurrencyNetworkShield is MerkleTree {
 
         // Check that the publicInputHash equals the hash of the 'public inputs':
         bytes31 publicInputHash = bytes31(bytes32(_inputs[0]) << 8);
-        bytes31 publicInputHashCheck = bytes31(sha256(abi.encodePacked(_root, _nullifier, uint128(_value), _payTo)) << 8); // Note that although _payTo represents an address, we have declared it as a uint256. This is because we want it to be abi-encoded as a bytes32 (left-padded with zeros) so as to match the padding in the hash calculation performed within the zokrates proof. Similarly, we force the _value to be left-padded with zeros to fill 128-bits.
+        // Note that although payTo represents an address, we have declared it as a bytes32. This is because we want it to match the padding in the hash calculation performed within the zokrates proof. Similarly, we force the _value to be left-padded with zeros to fill 128-bits.
+        bytes32 payTo = bytes32(uint256(_path[_path.length - 1]) << 96);
+        bytes31 publicInputHashCheck = bytes31(sha256(abi.encodePacked(_root, _nullifier, uint128(_value), payTo)) << 8);
         require(publicInputHashCheck == publicInputHash, "publicInputHash cannot be reconciled");
 
         // gas measurement:
@@ -352,9 +355,7 @@ contract CurrencyNetworkShield is MerkleTree {
         CurrencyNetworkBasic currencyNetwork = CurrencyNetworkBasic(
             CurrencyNetworkGateway(gateway).getCurrencyNetwork()
         );
-        address payToAddress = address(_payTo); // we passed _payTo as a uint256, to ensure the packing was correct within the sha256() above
-        require(_path[_path.length - 1] == payToAddress, "Path end is not payTo")
-        require(_path[0] == address(gateway), "Path start is not Gateway")
+        require(_path[0] == address(gateway), "Path start is not Gateway");
         currencyNetwork.transferFrom(_value, 0, _path, "");
 
         // gas measurement
