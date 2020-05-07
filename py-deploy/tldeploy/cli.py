@@ -393,7 +393,7 @@ def test(
     transaction_options = build_transaction_options(
         gas=gas, gas_price=gas_price, nonce=nonce
     )
-    networks, exchange, unw_eth, network_gateways, gateway_escrow_addresses, verifier, network_shields = deploy_networks(
+    networks, exchange, unw_eth, network_gateways, collateral_managers, verifier, network_shields = deploy_networks(
         web3,
         network_settings,
         currency_network_contract_name=currency_network_contract_name,
@@ -408,12 +408,13 @@ def test(
     network_addresses = [network.address for network in networks]
     network_shield_addresses = [network_shield.address for network_shield in network_shields]
     network_gateway_addresses = [network_gateway.address for network_gateway in network_gateways]
+    collateral_manager_addresses = [collateral_manager.address for collateral_manager in collateral_managers]
     exchange_address = exchange.address
     unw_eth_address = unw_eth.address
     addresses["networks"] = network_addresses
     addresses["network_shields"] = network_shield_addresses
     addresses["network_gateways"] = network_gateway_addresses
-    addresses["gateway_escrows"] = gateway_escrow_addresses
+    addresses["collateral_managers"] = collateral_manager_addresses
     addresses["verifier"] = verifier.address
     addresses["exchange"] = exchange_address
     addresses["unwEth"] = unw_eth_address
@@ -441,15 +442,15 @@ def test(
             to_checksum_address(verifier.address)
         )
     )
-    for settings, address, gateway_address, escrow_address, shield_address in zip(
+    for settings, address, gateway_address, collateral_manager_address, shield_address in zip(
         network_settings,
         network_addresses,
         network_gateway_addresses,
-        gateway_escrow_addresses,
+        collateral_manager_addresses,
         network_shield_addresses
     ):
         settings["gateway"] = gateway_address
-        settings["gateway_escrow"] = escrow_address
+        settings["collateral_manager"] = collateral_manager_address
         settings["shield"] = shield_address
         click.echo(
             "CurrencyNetwork({settings}) at {address}".format(

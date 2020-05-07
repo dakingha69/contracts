@@ -83,10 +83,10 @@ contract CurrencyNetworkGateway {
         collateralManager.fill(msg.sender, claimInCollateral);
 
         address[] memory path = new address[](2);
-        path[0] = address(this);
-        path[1] = msg.sender;
-        currencyNetwork.transfer(
-            uint64(balance),
+        path[0] = msg.sender;
+        path[1] = address(this);
+        currencyNetwork.transferFrom(
+            value,
             0,
             path,
             ""
@@ -109,10 +109,10 @@ contract CurrencyNetworkGateway {
         collateralManager.draw(msg.sender, payOffInCollateral);
 
         address[] memory path = new address[](2);
-        path[0] = msg.sender;
-        path[1] = address(this);
-        currencyNetwork.transferFrom(
-            value,
+        path[0] = address(this);
+        path[1] = msg.sender;
+        currencyNetwork.transfer(
+            uint64(balance),
             0,
             path,
             ""

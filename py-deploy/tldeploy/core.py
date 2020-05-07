@@ -126,8 +126,15 @@ def deploy_network_gateway(web3):
         "CurrencyNetworkGateway",
         web3=web3
     )
-    gateway_escrow_address = network_gateway.functions.getEscrow().call()
-    return network_gateway, gateway_escrow_address
+    return network_gateway
+
+
+def deploy_collateral_manager(web3):
+    collateral_manager = deploy(
+        "CollateralManager",
+        web3=web3,
+    )
+    return collateral_manager
 
 
 def deploy_network_shield(web3):
@@ -144,6 +151,7 @@ def deploy_network(
     symbol,
     decimals,
     expiration_time,
+    collateral_manager_contract=None,
     gateway_contract=None,
     shield_contract=None,
     verifier_contract=None,
@@ -156,6 +164,8 @@ def deploy_network(
     transaction_options: Dict = None,
     private_key=None,
     authorized_addresses=None,
+    ltv_ratio=100,
+    price_iou_tlc=1,
 ):
     if transaction_options is None:
         transaction_options = {}
@@ -177,31 +187,49 @@ def deploy_network(
     )
     increase_transaction_options_nonce(transaction_options)
 
-    if (gateway_contract is not None):
-        authorized_addresses.append(gateway_contract.address)
-        init_gateway_call = gateway_contract.functions.init(currency_network.address, 1)
+    if (collateral_manager_contract is not None):
+        init_collateral_manager_call = collateral_manager_contract.functions.init(
+            currency_network.address,
+            ltv_ratio,
+            price_iou_tlc 
+        )
         send_function_call_transaction(
-            init_gateway_call,
+            init_collateral_manager_call,
             web3=web3,
             transaction_options=transaction_options,
             private_key=private_key,
         )
         increase_transaction_options_nonce(transaction_options)
 
-        # Shield contract can only be initialized with verifier and gateway
-        if (verifier_contract is not None and shield_contract is not None):
-            authorized_addresses.append(shield_contract.address)
-            init_shield_call = shield_contract.functions.init(
-                verifier_contract.address,
-                gateway_contract.address
+        # Gateway contract can only be initialized with collateral manager
+        if (gateway_contract is not None):
+            authorized_addresses.append(gateway_contract.address)
+            init_gateway_call = gateway_contract.functions.init(
+                currency_network.address,
+                collateral_manager_contract.address
             )
             send_function_call_transaction(
-                init_shield_call,
+                init_gateway_call,
                 web3=web3,
                 transaction_options=transaction_options,
-                private_key=private_key
+                private_key=private_key,
             )
             increase_transaction_options_nonce(transaction_options)
+
+            # Shield contract can only be initialized with verifier and gateway
+            if (verifier_contract is not None and shield_contract is not None):
+                authorized_addresses.append(shield_contract.address)
+                init_shield_call = shield_contract.functions.init(
+                    verifier_contract.address,
+                    gateway_contract.address
+                )
+                send_function_call_transaction(
+                    init_shield_call,
+                    web3=web3,
+                    transaction_options=transaction_options,
+                    private_key=private_key
+                )
+                increase_transaction_options_nonce(transaction_options)
 
     if exchange_address is not None:
         authorized_addresses.append(exchange_address)
@@ -243,9 +271,13 @@ def deploy_networks(
         deploy_network_shield(web3) for i in range(0, len(network_settings))
     ]
 
-    network_gateways, gateway_escrow_addresses = zip(*[
+    network_gateways = [
         deploy_network_gateway(web3) for i in range(0, len(network_settings)) 
-    ])
+    ]
+
+    collateral_managers = [
+        deploy_collateral_manager(web3) for i in range(0, len(network_settings)) 
+    ]
 
     networks = [
         deploy_network(
@@ -253,6 +285,7 @@ def deploy_networks(
             exchange_address=exchange.address,
             currency_network_contract_name=currency_network_contract_name,
             gateway_contract=network_gateways[index],
+            collateral_manager_contract=collateral_managers[index],
             shield_contract=network_shields[index],
             verifier_contract=verifier,
             **network_setting,
@@ -260,7 +293,7 @@ def deploy_networks(
         for index, network_setting in enumerate(network_settings)
     ]
 
-    return networks, exchange, unw_eth, network_gateways, gateway_escrow_addresses, verifier, network_shields
+    return networks, exchange, unw_eth, network_gateways, collateral_managers, verifier, network_shields
 
 
 def deploy_identity(web3, owner_address):
