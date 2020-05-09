@@ -324,8 +324,8 @@ contract CurrencyNetworkShield is MerkleTree {
 
         // Check that the publicInputHash equals the hash of the 'public inputs':
         bytes31 publicInputHash = bytes31(bytes32(_inputs[0]) << 8);
-        // Note that although _path[_path.length - 1] represents an address, we have declared it as a bytes32. This is because we want it to match the padding in the hash calculation performed within the zokrates proof. Similarly, we force the _value to be left-padded with zeros to fill 128-bits.
-        bytes31 publicInputHashCheck = bytes31(sha256(abi.encodePacked(_root, _nullifier, uint128(_value), bytes32(uint256(_path[_path.length - 1]) << 96))) << 8);
+        // Note that although _path[_path.length - 1] represents an address, we cast it to a uint256. This is because we want it to match the padding in the hash calculation performed within the zokrates proof. Similarly, we force the _value to be left-padded with zeros to fill 128-bits.
+        bytes31 publicInputHashCheck = bytes31(sha256(abi.encodePacked(_root, _nullifier, uint128(_value), uint256(_path[_path.length - 1]))) << 8);
         require(publicInputHashCheck == publicInputHash, "publicInputHash cannot be reconciled");
 
         // gas measurement:
