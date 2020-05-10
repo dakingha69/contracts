@@ -53,9 +53,10 @@ contract CurrencyNetworkGateway {
     {
         // Lock msg.value in collateralManager
         collateralManager.lock.value(msg.value)(msg.sender);
+        uint256 collateral = collateralManager.collateralOf(msg.sender);
 
         // Convert msg.value to IOU
-        uint256 creditlineReceivedFromGateway = collateralManager.collateralToDebt(msg.value);
+        uint256 creditlineReceivedFromGateway = collateralManager.collateralToDebt(collateral);
 
         currencyNetwork.updateTrustline(
             msg.sender,
